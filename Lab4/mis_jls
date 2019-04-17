@@ -1,0 +1,633 @@
+#include <iostream>
+#include <set>
+#include <cstdio>
+#include <vector>
+#include <string>
+#include <cstdlib>
+#include <algorithm>
+#include "galois_field.h"
+#include "incremental_inverse.h"
+#include <map>
+using namespace std;
+
+class enm
+{
+	public:
+		enm( unsigned int m,unsigned int n, unsigned int s, unsigned r);
+		vector < vector<unsigned int> > e_v;			//holds a vector of disks to take down
+		vector < vector<unsigned int> > e_v2;			//holds a variation of the system with each set of m disks down
+		vector < vector<unsigned int> > * r_vp;			//holds a vector lists of words to take down
+		vector<unsigned int>  grp;						//used to hold a set of m disks to take down
+		vector<unsigned int>  grp2;						//used to hold a set of m disks to take down
+		void Get_enm(int idx, unsigned int m_dwn);		//creates a list of  m disks to take down, uses the options given in disks vector 
+		void Get_enm2(int idx, unsigned int s_dwn, int i);  
+		void Make_list_map();
+		void Set_wrdV();								//sets the word vector 
+		void Do_disk_enumeration( vector <vector<unsigned int> > PCM, Galois_Field * gf);
+	//Galois_Field * gf;
+		void prt_e_v();
+		void prt_e_v2();
+		void prt_mp_elmnt(int i );
+		unsigned int nd;								//repesents the number of disks
+		unsigned int rd;								//repesents the number of rows on each disk
+		unsigned int md;								//repesents the number of disks that will be missing on each sweep
+		unsigned int sd;								//repesents the number of words that will be missing on each sweep
+		vector <unsigned int> disk;						//represents the system as a set of 0->n-1 disk indexes
+		vector <unsigned int> words;					//represents the system as a set of 0-n-1 word indexes 
+		
+		string fail;
+		map <int, vector <vector<unsigned int> > * > enm_list;
+
+};
+
+		
+//sets up the map that will be used in conjunction  with e_v to iterate through the different combinations of n total disks and of m disks and s words down
+//the map entries are keyed to the e_v entry that corresponds to that set of disks down. i.e. if the number of disks down "m"= 2, and number of disks "n"= 6.
+//
+//e_v[0][0] = 1 0 == this means disk 0 and disk 1 are down: code = 0;
+//--this will correspond with the 0 coded map entry that has every group of s words left once the 0th set of disks removed
+void enm::Make_list_map()
+{
+	int i, j, k, l;
+ 
+	vector <vector<unsigned int> > * vvp;
+	for(i = 0; i < e_v2.size();i++)
+	{
+		
+		r_vp = new vector < vector<unsigned int> >;
+		
+		Get_enm2( 0,sd,i);
+
+
+
+		enm_list.insert( make_pair(i,r_vp) );
+
+		grp2.resize(0);
+
+	}
+
+
+	cout<<"_________________________________________________\n\n";
+	cout<<"the size of list map is :"<<enm_list.size()<<"\n";
+	cout<<"_________________________________________________\n\n";
+
+}
+
+
+//sets up the e_v2 that represents the disk as a set 0 indexed words that are without the words used when two disks 
+//are down
+void enm::Set_wrdV()
+{
+	unsigned int evr,evc,wi,i,Dc, mul;
+	vector<unsigned int> hv;
+	bool is_there = false; 
+	
+/*
+	for(i = 0; i < words.size();i++)
+	{
+		cout<<words[i]<<" ";
+		
+	}
+	
+	cout<<"\n";
+*/
+
+
+
+	//every row of ev
+	for(evr = 0 ; evr < e_v.size(); evr++)
+	{
+
+		//end every entry in words 
+		for(wi = 0; wi < words.size();wi++)
+		{
+			is_there = false;
+			//look at each entry in e_v and if it is wi word set the bool 
+			for(evc = 0; evc < e_v.at(evr).size() ;evc++)
+			{	
+				Dc = e_v.at(evr).at(evc);
+				for(mul = 1; mul < rd ; mul++)
+				{
+					if( words.at( wi ) == Dc || (wi == ( (nd * mul) + Dc)  ) )
+					{
+						is_there = true;
+
+					}
+				}
+//				//if it not there push it onto the holder vector
+//				if( is_there == false ) hv.push_back( words.at(wi) );
+
+
+			}
+				//if it not there push it onto the holder vector
+				if( is_there == false ) hv.push_back( words.at(wi) );
+		}
+
+		//once here push the holder vector onto ev2
+		e_v2.push_back(hv);
+		hv.resize(0);
+	}
+}
+
+
+void enm::Do_disk_enumeration( vector <vector<unsigned int> > PCM, Galois_Field * gf)
+{
+	unsigned int evr, evc, Dc,wi,prw,mul;
+
+	bool need_special = false;
+
+	int i, j ,r,add_rslt;
+	vector<unsigned int> try_v;
+	vector<unsigned int> rm_set;
+	map <int, vector <vector<unsigned int> > * >::iterator emp_it;
+
+	vector <vector<unsigned int> > * vvp;
+
+	set <unsigned int> try_st;
+	set <unsigned int>::iterator s_it;
+
+	int rows = (int)(md * rd + sd);
+
+	Incremental_Inverse  ic_inv(rows,gf);
+
+	//for every row in the e_v 
+	for(evr = 0; evr < e_v.size();evr++)
+	{
+		fail = string(nd*rd,'U');
+		//go through this e_v row's columns
+		for(evc = 0; evc < e_v.at(evr).size(); evc ++)
+		{
+			Dc = e_v[evr][evc];
+
+			//go through the columns of the PCM looking at the column number
+			//and comparing it to the m values stored in the e_v and thier possible multiples
+			for(wi = 0; wi < PCM.at(0).size(); wi++)
+			{
+				for(mul = 1; mul < rd;mul++)
+				{
+					if(wi == Dc || wi == (mul*nd) + Dc)
+					{
+			    //		for(prw = 0; prw < PCM.size();prw++)
+				//		{
+				//		}
+				
+						try_st.insert(wi);
+						fail.at(wi) = 'D';
+						//cout<<" "<<wi<<"was inserted\n";
+
+					}
+				}
+			}
+
+		}
+
+		
+cout<<"The evr code is: "<<evr<<"\n";
+		//now load sets of s sector failures from the map coded at evr
+		//emp_it = enm_list.find(evr);
+		 if(enm_list.find(evr) != enm_list.end() )vvp = enm_list.find(evr)->second;
+		
+		 for(r = 0; r < vvp->size(); r++)
+		 {
+cout<<"the size of the "<< r <<"th row of the vp here is:"<< vvp->at(r).size()<<"\n";
+//The bug is around here			 
+			
+			 for( j = 0 ; j < vvp->at(0).size();j++)
+			 {   cout<<"the vp element is : "<<vvp->at(r).at(j)<<"\n";
+				 rm_set.push_back(vvp->at(r).at(j));
+				 fail[vvp->at(r).at(j)] = 'S';
+				 try_st.insert(vvp->at(r).at(j) );
+			 }
+
+			 //after a word set is loaded try it on the matrix
+
+			 		
+
+			 //DB print the try set
+			 //		cout<<"The set is: \n";
+			 for(s_it = try_st.begin(); s_it != try_st.end(); s_it++)
+			 {
+				 //			cout<<" "<<*s_it;
+				 unsigned int col_I = *s_it;
+
+				 cout<<" the try is: "<<col_I<<"\n";
+				 for(i = 0; i < PCM.size();i++)
+				 {
+					 try_v.push_back( PCM[i][col_I] );
+				 }
+
+				 //cout<<" try's size: "<<try_v.size()<<"\n";
+
+				 add_rslt = ic_inv.Add_Col(try_v);
+//fail state-------
+				 if(add_rslt == 0)
+				 {
+					 cout<<"No: ";
+                     for(int fi = 0; fi < fail.size();fi++)
+					 {
+						cout<<fail[fi];
+					 }
+					 cout<<"\n";
+					 exit(0);
+				 }
+
+				 try_v.resize(0);
+				 //switch the s's back to u's
+				 for(int fi = 0; fi < rm_set.size();fi++)
+				 {
+					fail[rm_set[fi]] = '
+				 }
+			 }
+			 // if it gets here clear the supposed invertable matrix
+			 for(i = 0 ; i < md*rd + sd;i++)
+			 {
+				ic_inv.Delete_Col();
+			 }
+
+			 //now i need to remove the s things I added from the vvp
+			 for(i = 0; i < rm_set.size(); i++)
+			 {
+				try_st.erase(rm_set.at(i) );
+			 }
+		 }
+	}
+
+}
+void enm::prt_mp_elmnt(int i )
+{
+	int j,k;
+	vector <vector<unsigned int> > * vp;
+
+	map <int, vector <vector<unsigned int> > * >::iterator  enm_it;
+
+	vector <vector<unsigned int> >::iterator v_it;
+	cout<<"The code  of the map is:"<<i<<"\n";
+	for(enm_it = enm_list.begin() ; enm_it !=  enm_list.end() ; enm_it++)
+	{
+
+		//get the it disk set up
+		if(enm_it->first == i)
+		{
+			vp = enm_it->second;
+
+			for(j = 0; j < vp->size(); j++)
+			{
+				printf("\n");
+				cout<<" "<<j<<":";
+				cout<<"the size of this list is: "<<vp->size()<<"\n\n";
+				for(k = 0; k < vp->at(j).size() ; k++)
+				{
+					cout<<" "<<vp->at(j).at(k);
+				}
+
+				cout<<"\n";
+
+			}
+
+		}
+	}
+}
+
+void enm::prt_e_v2()
+{
+	int i,j;
+	cout<<"size of ev2:"<<e_v2.size()<<"\n";
+	for(i = 0; i < e_v2.size();i++)
+	{
+		cout<<" "<<i<<":";
+		for(j = 0; j < e_v2[i].size(); j++)
+		{
+			cout<<" "<<e_v2[i][j];
+		}
+
+		cout<<"\n";
+	}
+
+}
+
+void enm::prt_e_v()
+{
+	int i,j;
+	cout<<"size of ev:"<<e_v.size()<<"\n";
+	for(i = 0; i < e_v.size();i++)
+	{
+		for(j = 0; j < e_v[i].size(); j++)
+		{
+			cout<<" "<<e_v[i][j];
+		}
+
+		cout<<"\n";
+	}
+
+}
+
+enm::enm(unsigned int m,unsigned int n, unsigned int s, unsigned r)
+{
+	unsigned int i;
+
+	unsigned int ttl_wrds = n*r;
+
+
+
+	nd = n;
+	md = m;
+	rd = r;
+	sd = s;
+
+	//make the disk list vector
+	//will be used to create the enumeration vector
+	for(i = 0; i < n;i++)
+	{
+		disk.push_back(i);
+	}
+
+	//will be used to make the words list vector
+	//will be used to create the enumeration 2 vector
+	for(i = 0; i < ttl_wrds; i++)
+	{
+		words.push_back(i);
+	}
+	
+	//set up fail string
+	fail = string(nd*rd,'U');
+
+	//set up the e_v vector of enumeration lists
+	Get_enm(0,m);
+	//get the word vector that we will enumerate
+	Set_wrdV();
+
+	//uses Get_enm2 to create the map that will be used in conjunction with e_v to enumerate through
+	//the combinations of disks and sector failures
+	Make_list_map();
+
+
+
+
+
+//db--p	prt_mp_elmnt( 0  );
+
+}
+
+void enm::Get_enm(int idx, unsigned int m_dwn)
+{
+	if(m_dwn == 0)
+	{
+		//			cout<<"adding the following group\n";
+		//			for(int i =0;i < grp.size();i++)
+		//			{
+		//				cout<<" "<<grp[i];
+		//			}
+		//			cout<<"\n";
+		e_v.push_back(grp);
+		//			cout<<"added a group\n";
+		return;
+
+	}
+
+	//		cout<<"here it gets idx: "<<idx<<"\n";
+	//		cout<<"here it gets d size: "<<disk.size()<<"\n";
+	//		cout<<"here it gets d m_dwn: "<<m_dwn<<"\n";
+
+
+	if(m_dwn > disk.size() - idx) return;
+	//		if(idx == disk.size()) return;
+
+	grp.push_back( disk[idx] );
+
+
+
+	Get_enm(idx+1,m_dwn-1);
+
+	grp.pop_back();
+
+	Get_enm(idx+1,m_dwn);
+}
+
+
+//creates the map used in conjunction with e_v to iterate through combos of disks and words down
+void enm::Get_enm2(int idx, unsigned int s_dwn, int code)
+{
+
+
+	//	vector < vector<unsigned int> > r_v;			//holds a vector lists of words to take down
+	//    vector<unsigned int> grp2;						//holds a vector of words to take down
+
+	//go through e_v2 creating a vector of vectors representing this combination of 2 words to take down
+
+	if(s_dwn == 0)
+	{
+		//			cout<<"adding the following group\n";
+		//			for(int i =0;i < grp.size();i++)
+		//			{
+		//				cout<<" "<<grp[i];
+		//			}
+		//			cout<<"\n";
+		r_vp->push_back(grp2);
+		//			cout<<"added a group\n";
+		return;
+
+	}
+
+	//		cout<<"here it gets idx: "<<idx<<"\n";
+	//		cout<<"here it gets d size: "<<disk.size()<<"\n";
+	//		cout<<"here it gets d m_dwn: "<<m_dwn<<"\n";
+
+
+	if(s_dwn > e_v2.at(code).size() - idx) return;
+	//		if(idx == disk.size()) return;
+
+	grp2.push_back( e_v2.at(code).at(idx) );
+
+
+
+	Get_enm2(idx+1,s_dwn-1,code);
+
+	grp2.pop_back();
+
+	Get_enm2(idx+1,s_dwn,code);
+
+
+}
+
+
+//will get the number of combinations needed
+long long  comb(unsigned int n, unsigned int  k)
+{
+	long long rv=1;
+
+	//find minimum
+	long long mmin = min(n-k,k);
+
+	for(long long  i = 1; i <= mmin; i++)
+	{
+		rv *= (n - mmin+i );
+
+		rv /= i;
+
+	}
+
+	return rv;
+}
+
+
+//calculated ak ^ ni using galois multiplication, provided by Dr. Plank
+unsigned int G_math(unsigned int ak, unsigned int ni,Galois_Field * gf)
+{
+	unsigned int rv = 1;
+
+	//	cout<<"ni:"<<ni<<"\n";
+
+	if(ni == 0) return 1;
+	if(ni == 1) return ak;
+
+	for(int m = 1; m <= ni; m++)
+	{
+		rv = gf->Multiply(rv,ak);
+	}
+
+//	cout<<"rv:"<<rv<<"\n";
+
+	return rv;
+}
+
+
+int main(int argc, char** argv)
+{
+	unsigned int n, m, s, w,i,j,c,mul,r,x,k,a_k;
+
+	unsigned int row, col,num,pwr;
+	Galois_Field * gf;
+
+	enm * ENM;
+
+	long long dcomb;
+	long long wcomb;
+	long long wrds;
+	
+	int g = 0;
+
+	vector <unsigned int> co_v;
+	vector < vector<unsigned int> > PCM;
+
+	//grab command line args
+	n = atoi( argv[ 1 ] ); 
+	m = atoi( argv[ 2 ] );
+	s = atoi( argv[ 3 ] );
+	r = atoi( argv[ 4 ] );
+	w = atoi( argv[ 5 ] );
+
+	gf = new Galois_Field(w);	
+
+	//get neccessary number of combinations of disks
+	dcomb = comb(n,m);
+	
+	//get neccessary number of combinations of words
+	wrds = r * (n-m); 
+
+	wcomb = comb(wrds,s);
+
+	ENM = new enm(m,n,s,r);
+//	cout<<"there are "<<dcomb<<" disk combos and "<<wcomb<<" word combos\n"; 
+
+
+//	ENM->Get_enm(0,m);
+	ENM->prt_e_v();
+	ENM->prt_e_v2();
+
+	//grab the coefficients
+	for(i = 0; i < m + s; i++)
+	{
+		co_v.push_back( atoi ( argv[6 + i] ) );
+	}
+
+//DB the below code just prints all the command line args
+/*
+	cout<<" n: "<<n<<"\n"
+		<<" m: "<<m<<"\n"
+		<<" s: "<<s<<"\n"
+		<<" r: "<<r<<"\n"
+		<<" w: "<<w<<"\n";
+
+
+	cout<<"the coefficient vector is:\n";
+
+	for(i = 0; i < co_v.size(); i++)
+	{
+		cout<<" "<<co_v.at(i)<<"\n";
+	}
+*/
+
+	//make parity check matrix  of size mr+s, nr
+	PCM.resize( m*r+s);
+
+	for(i = 0; i < PCM.size();i++)
+	{
+		PCM.at(i).resize(n*r, 0);
+	}
+
+//	cout<<"the size of PCM is: "<<PCM.size()<<" x "<<PCM.at(0).size()<<"\n";
+
+	/*
+	//DB
+	for(i = 0; i < PCM.size();i++)
+	{
+	for(j = 0; j < PCM.at(0).size();j++)
+	{
+	cout<<" "<<PCM[i][j];
+	}
+
+	cout<<"\n";
+
+	}
+	*/
+
+	for(x = 0; x < m*r; x++)
+	{
+		i = x % r;
+		k = x / r;
+		a_k = co_v.at(k);
+		pwr = i * n;
+//		cout<<"a_k:"<<a_k<<"\n";
+		for( c = i * n ; c < i*n + n; c++)
+		{
+			num = G_math(a_k,c,gf);
+			PCM.at(x).at(c) = num;
+		}
+
+	}
+
+
+//set up the bottom rows of the pcm
+	for(i = 0; i < s; i++)
+	{
+		row = m*r +i;
+		a_k = co_v.at(m+i);
+		for(j = 0;j < n*r; j++)
+		{ 
+
+			PCM[ m*r + i][j] = G_math(a_k,j,gf);
+		}
+	}
+
+
+
+
+//DB print the pcm
+//
+/*
+	for(i = 0; i < PCM.size();i++)
+	{
+		for(j = 0; j < PCM.at(0).size();j++)
+		{
+			cout<<" "<<PCM[i][j];
+		}
+
+		cout<<"\n";
+
+	}
+*/
+
+	ENM->Do_disk_enumeration(PCM, gf);
+
+	return 0;
+}

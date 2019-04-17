@@ -1,0 +1,630 @@
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+//Program: //
+//Created By: Gerald Jones                                                                     //
+//Purpose: //
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+#include <iostream>
+#include <string>
+#include <cstdio>
+#include <vector>
+#include <set>
+#include <cstdlib>
+
+using namespace std;
+
+
+//creates a instance representing a ball
+class Ball
+{
+	public:
+		int val;
+		Ball * high;	//will be used to point to the ball in the second pic that is a possibility for the ball to move higher
+		Ball * low;		//will be used to point to the ball in the second pic that is a possibility for the ball to move lower
+};
+
+
+class OneDimensionalBalls
+{
+	public:
+		long long countValidGuesses(vector<int> &firstPic, vector<int> &secondPic );	//will set up the neccessarry vectors full of balls 
+		//and use the cvg() function to count valid guesses
+
+		long long cvg(int &velocity);														//will count the valid guesses for the given velocity 																 																			
+
+		vector <Ball *> FP_ptr;		//will hold pointers to the balls in FP
+
+		vector <Ball *> SP_ptr;		//will hold pointers to the balls in SP
+};
+
+
+
+long long OneDimensionalBalls::countValidGuesses(vector<int> &firstPicture, vector<int> &secondPicture)
+{
+	int i , d, j;
+
+	long long rv = 0;			//will be used to return the number of guesses
+
+
+
+
+	Ball * BP;					//will be used to grab pointers to ball instances
+
+	vector <int> FP = firstPicture;		//will hold the original 
+	vector <int> SP = secondPicture;	//will hold the original
+
+
+	//DB	vector <Ball *> FP_ptr;		//will hold pointers to the balls in FP
+	//DB	vector <Ball *> SP_ptr;		//will hold pointers to the balls in SP
+
+
+	vector <vector<int> > diff;	//will hold the differences of the FP values and the SP values
+
+	diff.resize( FP.size() );
+
+	set <int> vels ;			//will store the possible legal velocitys 
+
+	set <int>::iterator vit;	//will be used to iterate through the velocity's set
+
+	///////////////////////////////////////////////////////////////////////////////////////////////////
+	////The below segment of code will make the ball objects and store them in the appropriate vector//
+	///////////////////////////////////////////////////////////////////////////////////////////////////
+
+	//set up the firstpicture ball pointer vector
+	for( i = 0; i < firstPicture.size() ; i++ )
+	{
+		BP = new Ball;		//create a new ball 
+
+		BP->val =  firstPicture.at(i);	//set the balls value
+		BP->low = NULL;					//set the balls low to NULL 
+		BP->high = NULL;				//set the balls high to NULL
+
+		FP_ptr.push_back(BP);			//store the ball pointer in the vector
+	}	
+
+
+
+	//set up the secondpicture ball pointer vector
+	for( i = 0; i < secondPicture.size() ; i++ )
+	{
+		BP = new Ball;		//create a new ball 
+
+		BP->val =  secondPicture.at(i);	//set the balls value
+		BP->low = NULL;					//set the balls low to NULL 
+		BP->high = NULL;				//set the balls high to NULL
+
+
+		SP_ptr.push_back(BP);			//store the ball pointer in the vector
+	}
+
+	//db	
+	//
+	//db print out the supposed vector val's
+
+	cout<<"The supposed vectors are:\n";
+
+	for(i = 0; i < FP_ptr.size(); i++)
+	{
+		cout << FP_ptr.at(i)->val <<" ";
+	}
+
+
+	cout<<"\n";
+
+	for(i = 0; i < SP_ptr.size(); i++)
+	{
+		cout << SP_ptr.at(i)->val <<" ";
+	}
+
+	cout <<"\n";
+	//db
+
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//find the possible values of the velocitys by getting the differences of the FP values and the SP values//
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+	for( i = 0 ; i < FP.size(); i++)
+	{
+		for( j = 0; j < SP.size(); j++)
+		{
+			d = FP.at(i) - SP.at(j);		//get the difference
+
+			diff.at(i).push_back( d );		//put the difference in the vector
+
+
+		}
+	}
+
+	//db
+	cout <<"the differece vector's size is: " << diff.size() <<" : "<< diff.at(0).size() <<"\n"; 
+
+	//db/////
+	//print out the supposed diff vector
+	//
+
+	cout <<"The supposed difference vector is:\n";
+
+
+	//
+
+	for(i = 0; i < diff.size();i++)
+	{
+		for( j = 0; j < diff.at(i).size(); j++)
+		{
+			cout << diff.at(i).at(j) <<" ";
+		}
+
+		cout <<"\n";
+	}
+	//db
+
+
+	///////////////////////////////////////////////////////////////////////////////////////////////
+	///// The below segment of code will find all the possible velocity values and store them   ///
+	///// in the vels vector. It is a little buggy on how it does the store and compare because ///
+	///// it compares the last row by itself and store matches from just the last row. I think  ///
+	///// I can work around this in the way i do the actuel guess counting.						///
+	///////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+	for(i = 0; i < diff.at(0).size(); i++)
+	{
+
+
+
+		if(diff.at(0).at(i) != 0)
+		{
+
+
+			for(int r = 1; r < diff.size(); r++)
+			{	
+				for( int c = 0; c < diff.at(0).size(); c++)
+				{
+
+
+			
+					if(abs( diff.at(0).at(i) ) == abs( diff.at(r).at(c) ) )
+					{
+	
+						if(r == diff.size() - 1 )
+						{
+							d = diff.at(r).at(c);
+						
+							if( d < 0 ) d = -d;
+
+							
+							vels.insert( d );		
+
+
+							c = diff.at(0).size();
+						}
+						else
+						{
+							c = diff.at(0).size();
+						}
+					}
+				}
+			}
+
+		}
+	}
+
+	//db//
+	//print out the velocity vector
+	//
+
+	cout<<"the supposed velocitys are:\n";
+
+	for(vit = vels.begin(); vit != vels.end(); vit++)
+	{
+		cout << *vit <<" ";
+	}
+	cout<<"\n";
+
+	vit = vels.begin();
+	i = (*vit);	
+	rv = cvg(i);
+
+	return rv;
+
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// This block of code will call the cvg() function and calculate the valid guesses for each valid velocity //
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+}
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// cvg( ) ---  will count the valid guesses for the velocity given
+///////////////////////////////////////////////////////////////////////////////////////////
+long long OneDimensionalBalls::cvg( int &velocity)
+{
+	//varscvg
+	int i, j ,cnt,val,num;
+
+
+	vector< Ball *> FPr = FP_ptr;	//make a copy for manipulation
+	vector< Ball *> SPr = SP_ptr;	//make a copy for manipulation
+
+	vector< Ball *>::iterator P_it;	//will be used to iterate through pictures
+
+	vector< Ball *>::iterator ED_it;	//a iterator that represents the current end of the vector
+
+	Ball * FBP;
+
+	Ball * SBP;
+
+	Ball * HBP;		//pointer to a ball's high
+
+	Ball * LBP;		//pointer to a ball's low
+
+	Ball * GBP;		//pointer to a general ball
+
+	Ball Bhld;
+	cout<<"the velocity is:"<<velocity<<"\n";
+
+	//go through the FPr vector of pointers to the balls in the first picture
+	for(i = 0; i < FPr.size(); i++)
+	{
+		for( j = -1 ; j <= 1 ; j += 2 )
+		{
+			FBP = FPr.at(i);
+			val = FBP->val + velocity * j;
+
+
+			for(cnt = 0; cnt < SPr.size(); cnt++)
+			{
+				SBP = SPr.at(cnt);		
+				num = SBP->val;
+
+
+				if(val == num)
+				{
+					if(j < 0)
+					{
+						FBP->low = SBP;
+						SBP->high = FBP;
+					}
+					else
+					{
+						FBP->high = SBP;
+						SBP->low = FBP;
+					}
+				}
+			}
+		}
+
+	}
+//db312	
+/*
+
+	//DB check that the pointers are set up correctly	
+	//go through FPr and look at the balls pointers
+	for(i = 0; i < FPr.size(); i++)
+	{
+		FBP = FPr.at(i);
+
+		//show what the val of FPR[i]
+		printf("the val of ball %d is %d\n",i,FBP->val);
+
+		//show the high of current ball
+		HBP = FBP->high;	//get the high of this ball
+
+		LBP = FBP->low;		//get the low of this ball
+
+		//print the high and low---
+		//
+		//check the high ball and it's low pointer
+		if(HBP != NULL)
+		{
+			printf("the high of ball %d is %d\n",i,HBP->val);
+
+			//get the low of this SP ball
+			GBP = HBP->low;
+
+			if(GBP != NULL)
+			{
+				//print the high balls low  to check
+				printf("the high  balls low is %d \n",FBP->val);
+
+			}
+			else
+			{
+				cout<<"this high sp balls low is null\n";
+			}
+		}
+		else
+		{
+			cout<<"the fp balls high is null\n";
+		}
+
+
+		//check the low ball and it's high pointer
+		if(LBP != NULL)
+		{
+			printf("the low of ball %d is %d\n",i,LBP->val);
+
+			//get the fp ball's low's high
+			GBP = LBP->high;
+
+
+			if(GBP != NULL)
+			{
+				//print this balls low
+				printf("the low  balls high is %d \n",GBP->val);
+
+			}
+			else
+			{
+				cout<<"this low SP ball's high is null\n";
+			}
+		}
+		else
+		{
+			cout<<"the fp balls low is null\n";
+		}
+
+
+	}
+
+*/	
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	// look through both FPr and SPr vector looking for balls with no pointers and removing them/
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	cout<<"make it it it \n";
+
+	for(i = 0; i < SPr.size();i++)
+	{
+
+
+		SBP = SPr.at(i);
+
+		vector<Ball*>::iterator B_it;
+
+		//look for a non connected bottom ball and remove it/print it
+		if( SBP->high == NULL && SBP->low == NULL)
+		{
+			printf("Ball %d is %d and it's h/l are Null\n", i,SBP->val);
+
+			//find a iterator to this pointer
+			B_it = SPr.find( Spr.begin(), Spr.end(), Spr.at(i) );
+
+			
+		}
+		else if(SBP->high == NULL)
+		{
+			printf("Ball %d is %d and it's h/l are Null and %d\n", i,SBP->val,SBP->low->val);
+		}
+		else if(SBP->low == NULL)
+		{
+			printf("Ball %d is %d and it's h/l are %d and NULL\n", i,SBP->val,SBP->high->val);
+		}
+		else
+		{
+			printf("Ball %d is %d and it's h/l are %d and %d\n", i,SBP->val,SBP->high->val,SBP->low->val);
+		}
+		
+	}
+
+
+	//DB--62 lines above	
+
+
+	//DB387---------------------------------------------------		
+//DB390-------------------------------------------
+/*
+	for(i = 0; i < FPr.size(); i++)
+	{
+		FBP = FPr.at(i);
+
+		//show what the val of FPR[i]
+		//DB	printf("the val of ball %d is %d\n",i,FBP->val);
+
+		//show the high of current ball
+		HBP = FBP->high;	//get the high of this ball
+
+		LBP = FBP->low;		//get the low of this ball
+
+		//check for Null on high side and low side
+		//if found remove ball from FPr
+		if(HBP == NULL)
+		{
+
+			//if so check for null on low side
+			//if found given be is not a solution so return 0 guesses
+			if(LBP == NULL)
+			{
+				return 0;
+
+			}
+			//remove the ball with only one pointer
+			else
+			{
+				//remove the pointer to the ball in FPr
+
+				for(P_it = FPr.begin();P_it != FPr.end();P_it++)
+				{	//if you find the first ball pointer
+					//remove it
+					if(*P_it == FBP)
+					{
+
+						FPr.erase(P_it);
+						P_it = FPr.end();
+					}
+				}
+
+
+				//remove the balls from SPr
+				for(P_it == SPr.begin() ; P_it != SPr.end();P_it++)
+				{
+					if(*P_it == LBP)
+					{
+						SPr.erase(P_it);
+						P_it = SPr.end();
+					}
+				}
+
+				for(P_it == SPr.begin() ; P_it != SPr.end();P_it++)
+				{
+					if(*P_it == HBP)
+					{
+						SPr.erase(P_it);
+						P_it = SPr.end();
+					}
+				}
+			}
+
+		}
+
+		//if it gets here the HBP was not null
+		//check for a low == null
+		//if found remove ball due to one null pointer
+		else if(LBP == NULL)
+		{
+
+			//remove the pointer to the ball in FPr
+
+			for(P_it = FPr.begin();P_it != FPr.end();P_it++)
+			{	//if you find the first ball pointer
+				//remove it
+				if(*P_it == FBP)
+				{
+
+					FPr.erase(P_it);
+					P_it = FPr.end();
+				}
+			}
+
+
+			//remove the balls from SPr
+			for(P_it == SPr.begin() ; P_it != SPr.end();P_it++)
+			{
+				if(*P_it == LBP)
+				{
+					SPr.erase(P_it);
+					P_it = SPr.end();
+				}
+			}
+
+			for(P_it == SPr.begin() ; P_it != SPr.end();P_it++)
+			{
+				if(*P_it == HBP)
+				{
+					SPr.erase(P_it);
+					P_it = SPr.end();
+				}
+			}
+
+		}
+
+		//if it gets the ball is double pointed
+
+	}
+
+
+	//remove gaps in SPr
+	int size = SPr.size();	
+	for(i = 0; i < SPr.size(); i++)
+	{
+		//check the balls High and low
+		SBP = SPr.at(i);		//grab pointer i
+		HBP = SBP->high;
+		LBP = SBP->low;
+
+		if(HBP == NULL && LBP == NULL)
+		{
+			for(j = 0; j < SPr.size() ; j++)
+			{
+
+
+				cout<<"it gets here\n";
+
+				GBP = SPr.at(j);
+
+				GBP->val = -1;
+
+				//	if((*P_it) == SBP)
+				//	{
+
+				cout<<"The ball number is: \n"<<num<<"\n";
+
+				//		SPr.erase(P_it);
+				//		P_it = SPr.end() - 1;
+				size--;
+				//	}
+				//			else
+				//			{
+				cout<<"the SPBwas not found\n";
+				//			}
+			}
+		}
+
+	}
+	//DB
+	//print out the adjusted FPr and SPr balls
+	//
+
+	cout<<"The FPr contains :\n";
+
+	for(i = 0 ; i < FPr.size(); i++)
+	{
+		FBP = FPr.at(i);
+
+		cout<<FBP->val<<"\n";
+	}
+
+	cout<<"The SPr contains :\n";
+
+	for(i = 0 ; i < SPr.size(); i++)
+	{
+		SBP = SPr.at(i);
+
+		cout<<SBP->val<<"\n";
+	}
+
+*/
+	return 0;
+}
+
+//////themain/////////////////////
+int main(int argc, char **argv)
+{
+
+
+	//create instance of OneDimensionalBalls class
+	OneDimensionalBalls  ODB;
+
+
+
+	vector <int> fp ;
+
+	vector <int> sp ;
+
+	for(int i = 2 ; i < 7; i +=2)
+	{
+		fp.push_back(i);
+	}
+
+	for(int i = 1 ; i < 9; i++)
+	{
+
+		if(i != 6)
+		{
+			sp.push_back(i);
+		}
+	}
+
+
+	long long num = ODB.countValidGuesses(fp, sp); 
+
+
+	return 0;
+}
